@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * File Name          : main.c
-  * Date               : 21/03/2015 03:28:11
+  * Date               : 21/03/2015 22:10:31
   * Description        : Main program body
   ******************************************************************************
   *
@@ -55,9 +55,6 @@
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc;
-DMA_HandleTypeDef hdma_adc;
-
 I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim3;
@@ -67,27 +64,33 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
-float Ref_yaw = 0, Ref_pitch = 0, Ref_roll = 0;
-float q_yaw, q_pitch, q_roll;                                            // States value
+float Ref_pitch = 0;
+float q_pitch = 0;                                         
 float q1 = 1, q2 = 0, q3 = 0, q4 = 0;
+float error = 0;
+float error_dot = 0;
+
+float Kp = 0;
+float Kd = 0;
 
 int16_t Pwm = 0;
 int16_t AccelGyro[6] = {0};       // RAW states value
-
+int8_t enable = 0;
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
-static void MX_ADC_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM17_Init(void);
 static void MX_USART1_UART_Init(void);
 
 /* USER CODE BEGIN PFP */
+
+
+
 
 void Initial_MPU6050(void);
 void read_mpu6050(void);
@@ -99,6 +102,7 @@ void MPU6050_GetRawAccelGyro(int16_t* AccelGyro);
 volatile void Drive_motor_output(void);
 volatile void Sampling(void);
 volatile void ahrs(void);
+
 
 /* USER CODE END PFP */
 
@@ -123,8 +127,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_ADC_Init();
   MX_I2C1_Init();
   MX_TIM3_Init();
   MX_TIM17_Init();
@@ -138,14 +140,15 @@ int main(void)
 	
 	HAL_TIM_Base_Start_IT(&htim17);
 	
-	
+	HAL_Delay(5000);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET); 
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN 3 */
   /* Infinite loop */
   while (1)
   {
-		HAL_Delay(100);
+		HAL_Delay(50);
 		HAL_GPIO_TogglePin(GPIOF, GPIO_PIN_0);
 
   }
@@ -162,11 +165,9 @@ void SystemClock_Config(void)
   RCC_ClkInitTypeDef RCC_ClkInitStruct;
   RCC_PeriphCLKInitTypeDef PeriphClkInit;
 
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSI14;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSI14State = RCC_HSI14_ON;
   RCC_OscInitStruct.HSICalibrationValue = 16;
-  RCC_OscInitStruct.HSI14CalibrationValue = 16;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL12;
@@ -185,43 +186,6 @@ void SystemClock_Config(void)
   HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
 
   __SYSCFG_CLK_ENABLE();
-
-}
-
-/* ADC init function */
-void MX_ADC_Init(void)
-{
-
-  ADC_ChannelConfTypeDef sConfig;
-
-    /**Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
-    */
-  hadc.Instance = ADC1;
-  hadc.Init.ClockPrescaler = ADC_CLOCK_ASYNC;
-  hadc.Init.Resolution = ADC_RESOLUTION12b;
-  hadc.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc.Init.ScanConvMode = ADC_SCAN_DIRECTION_FORWARD;
-  hadc.Init.EOCSelection = EOC_SINGLE_CONV;
-  hadc.Init.LowPowerAutoWait = DISABLE;
-  hadc.Init.LowPowerAutoPowerOff = DISABLE;
-  hadc.Init.ContinuousConvMode = ENABLE;
-  hadc.Init.DiscontinuousConvMode = DISABLE;
-  hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc.Init.DMAContinuousRequests = ENABLE;
-  hadc.Init.Overrun = OVR_DATA_PRESERVED;
-  HAL_ADC_Init(&hadc);
-
-    /**Configure for the selected ADC regular channel to be converted. 
-    */
-  sConfig.Channel = ADC_CHANNEL_0;
-  sConfig.Rank = 2;
-  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
-  HAL_ADC_ConfigChannel(&hadc, &sConfig);
-
-    /**Configure for the selected ADC regular channel to be converted. 
-    */
-  sConfig.Rank = 1;
-  HAL_ADC_ConfigChannel(&hadc, &sConfig);
 
 }
 
@@ -304,18 +268,6 @@ void MX_USART1_UART_Init(void)
 
 }
 
-/** 
-  * Enable DMA controller clock
-  */
-void MX_DMA_Init(void) 
-{
-  /* DMA controller clock enable */
-  __DMA1_CLK_ENABLE();
-
-  /* DMA interrupt init */
-
-}
-
 /** Configure pins as 
         * Analog 
         * Input 
@@ -331,7 +283,6 @@ void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __GPIOF_CLK_ENABLE();
   __GPIOA_CLK_ENABLE();
-  __GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pins : PF0 PF1 */
   GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
@@ -340,24 +291,18 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  /*Configure GPIO pins : PA0 PA4 PA5 PA7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PB1 */
+  /*Configure GPIO pin : PA1 */
   GPIO_InitStruct.Pin = GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }
 
@@ -457,7 +402,8 @@ volatile void Icurrent_output(float tmp_Io)
 }
 volatile void Sampling(void)
 {
-//	HAL_GPIO_WritePin(GPIOF,GPIO_PIN_1,GPIO_PIN_SET);
+	static float error_prev;
+	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_SET);
 
 	
 	/* Read data from sensor */
@@ -466,15 +412,41 @@ volatile void Sampling(void)
 	ahrs();
 
 	/* Controller */
+	error_prev = error;
+	error = Ref_pitch - q_pitch;
+	error_dot = (error - error_prev) * sampleFreq;
 	
-//	HAL_GPIO_WritePin(GPIOF,GPIO_PIN_1,GPIO_PIN_SET);
+	Pwm = Kp*error + Kd*error_dot;
+	
+	enable = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
+	
+	if (enable == GPIO_PIN_SET)
+	{
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
+		
+		if (Pwm > 0)
+		{
+			
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+			Icurrent_output(Pwm);
+				
+				
+			
+		}else{
+			
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+			Icurrent_output(-Pwm);
+		}
+	}else{
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
+	}
+	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_RESET);
 
 }
 
 volatile void ahrs(void)
 {
 	// quaternion base process 	
-	float temp1, temp2;
 	float Norm;
 	float ax = AccelGyro[0];
 	float ay = AccelGyro[1];
@@ -537,10 +509,8 @@ volatile void ahrs(void)
 	q3 /= Norm;
 	q4 /= Norm;
 	// convert to euler
-	temp1 =  2*(q3*q4 + q1*q2);
-  temp2 = 2*(0.5f - q2*q2 - q3*q3);
-	q_pitch = atan2f (temp1,temp2)* -180.0f / M_PI;
-	q_roll = asinf(-2*(q2*q4 - q1*q3))* -180.0f / M_PI;
+
+	q_pitch = asinf(-2*(q2*q4 - q1*q3))* -180.0f / M_PI;
 
 
 
