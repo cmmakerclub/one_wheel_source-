@@ -43,9 +43,9 @@
 #define M_PI                        3.14159265359f	    
 #define sampleFreq                  250.0f     			    // 250 hz sample rate!   
 
-#define gx_diff 										0
-#define gy_diff 										0
-#define gz_diff 										0
+#define gx_diff 										-456.0f
+#define gy_diff 										-17.0f
+#define gz_diff 										-29.0f
 
 #include "MPU6050.h"
 #include <math.h>
@@ -70,13 +70,17 @@ float q1 = 1, q2 = 0, q3 = 0, q4 = 0;
 float error = 0;
 float error_dot = 0;
 
-float Kp = 0;
-float Kd = 0;
+float Kp = 450;
+float Kd = 20;
+
+float a = 0;
+float b = 0;
+float c = 0;
 
 int16_t Pwm = 0;
 int16_t AccelGyro[6] = {0};       // RAW states value
 int8_t enable = 0;
-
+int8_t action = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -86,6 +90,7 @@ static void MX_I2C1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM17_Init(void);
 static void MX_USART1_UART_Init(void);
+float Smooth_filter(float alfa, float new_data, float prev_data);
 
 /* USER CODE BEGIN PFP */
 
@@ -323,7 +328,7 @@ void Initial_MPU6050(void)
 	//    interupt(Enable)
 	MPU6050_WriteBit(MPU6050_DEFAULT_ADDRESS, MPU6050_RA_INT_ENABLE, MPU6050_INTERRUPT_DATA_RDY_BIT, ENABLE);
 	//			SetDLPF(MPU6050_DLPF_BW_98)
-	MPU6050_WriteBits(MPU6050_DEFAULT_ADDRESS, MPU6050_RA_CONFIG, MPU6050_CFG_DLPF_CFG_BIT, MPU6050_CFG_DLPF_CFG_LENGTH, MPU6050_DLPF_BW_188);
+	MPU6050_WriteBits(MPU6050_DEFAULT_ADDRESS, MPU6050_RA_CONFIG, MPU6050_CFG_DLPF_CFG_BIT, MPU6050_CFG_DLPF_CFG_LENGTH, MPU6050_DLPF_BW_42);
 	//    SetSleepModeStatus(DISABLE)
 	MPU6050_WriteBit(MPU6050_DEFAULT_ADDRESS, MPU6050_RA_PWR_MGMT_1, MPU6050_PWR1_SLEEP_BIT, DISABLE);
 
@@ -397,7 +402,7 @@ volatile void Icurrent_output(float tmp_Io)
 	if (tmp_Io > 2399) tmp_Io = 2399;
 	if (tmp_Io < 0) tmp_Io = 0;
 	
-	TIM3 ->CCR1 = tmp_Io;
+	TIM3->CCR1 = tmp_Io;
 
 }
 volatile void Sampling(void)
@@ -414,16 +419,23 @@ volatile void Sampling(void)
 	/* Controller */
 	error_prev = error;
 	error = Ref_pitch - q_pitch;
-	error_dot = (error - error_prev) * sampleFreq;
+	error_dot = (error - error_prev) ;
 	
 	Pwm = Kp*error + Kd*error_dot;
 	
+	
+	
+	
+	
+	
 	enable = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
 	
-	if (enable == GPIO_PIN_SET)
+	if (enable == GPIO_PIN_SET && (action == 1 || (q_pitch < 0.5 && q_pitch >-0.5)))
 	{
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
+		action = 1;
 		
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET); // enable drive
+
 		if (Pwm > 0)
 		{
 			
@@ -438,9 +450,13 @@ volatile void Sampling(void)
 			Icurrent_output(-Pwm);
 		}
 	}else{
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
+		
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // disable drive
+		error = 0;
+		error_dot = 0;
+		action = 0;
 	}
-	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_RESET); 
 
 }
 
@@ -514,6 +530,12 @@ volatile void ahrs(void)
 
 
 
+}
+
+float Smooth_filter(float alfa, float new_data, float prev_data)
+{
+  float output = prev_data + (alfa * (new_data - prev_data));
+  return output;
 }
 /* USER CODE END 4 */
 
