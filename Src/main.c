@@ -64,14 +64,14 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
-float Ref_pitch = 0;
+float Ref_pitch = 1.425f;
 float q_pitch = 0;                                         
 float q1 = 1, q2 = 0, q3 = 0, q4 = 0;
 float error = 0;
 float error_dot = 0;
 
 float Kp = 450;
-float Kd = 20;
+float Kd = 10;
 
 float a = 0;
 float b = 0;
@@ -439,13 +439,14 @@ volatile void Sampling(void)
 		if (Pwm > 0)
 		{
 			
+			if (Pwm < 40) Pwm = 0;
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
 			Icurrent_output(Pwm);
 				
 				
 			
 		}else{
-			
+			if (Pwm > -40) Pwm = 0;
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
 			Icurrent_output(-Pwm);
 		}
