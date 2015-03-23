@@ -430,7 +430,7 @@ volatile void Sampling(void)
 	
 	enable = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
 	
-	if (enable == GPIO_PIN_SET && (action == 1 || (q_pitch < 0.5 && q_pitch >-0.5)))
+	if (enable == GPIO_PIN_SET && (action == 1 || (q_pitch < Ref_pitch+0.3f && q_pitch > Ref_pitch-0.3f)))
 	{
 		action = 1;
 		
