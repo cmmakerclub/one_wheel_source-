@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
-  * @file    stm32f0xx_it.c
-  * @brief   Interrupt Service Routines.
+  * File Name          : mxconstants.h
+  * Description        : This file contains the common defines of the application
   ******************************************************************************
   *
   * COPYRIGHT(c) 2015 STMicroelectronics
@@ -31,73 +31,41 @@
   ******************************************************************************
   */
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f0xx_hal.h"
-#include "stm32f0xx.h"
-#include "stm32f0xx_it.h"
 
-/* USER CODE BEGIN 0 */
+/* USER CODE BEGIN Includes */
 
-/* USER CODE END 0 */
+/* USER CODE END Includes */
 
-/* External variables --------------------------------------------------------*/
-extern TIM_HandleTypeDef htim17;
-extern DMA_HandleTypeDef hdma_usart1_tx;
+/* Private define ------------------------------------------------------------*/
 
-/******************************************************************************/
-/*            Cortex-M0 Processor Interruption and Exception Handlers         */ 
-/******************************************************************************/
+#define led_vcc_Pin GPIO_PIN_0
+#define led_vcc_GPIO_Port GPIOF
+#define led_gnd_Pin GPIO_PIN_1
+#define led_gnd_GPIO_Port GPIOF
+#define gnd_Pin GPIO_PIN_0
+#define gnd_GPIO_Port GPIOA
+#define safe_button_Pin GPIO_PIN_1
+#define safe_button_GPIO_Port GPIOA
+#define reset_Pin GPIO_PIN_4
+#define reset_GPIO_Port GPIOA
+#define dir_Pin GPIO_PIN_5
+#define dir_GPIO_Port GPIOA
+#define Icurrent_Pin GPIO_PIN_6
+#define Icurrent_GPIO_Port GPIOA
+#define enable_Pin GPIO_PIN_7
+#define enable_GPIO_Port GPIOA
+#define mpu6050_gnd_Pin GPIO_PIN_1
+#define mpu6050_gnd_GPIO_Port GPIOB
+/* USER CODE BEGIN Private defines */
 
-/**
-* @brief This function handles System tick timer.
-*/
-void SysTick_Handler(void)
-{
-  /* USER CODE BEGIN SysTick_IRQn 0 */
-
-  /* USER CODE END SysTick_IRQn 0 */
-  HAL_IncTick();
-  HAL_SYSTICK_IRQHandler();
-  /* USER CODE BEGIN SysTick_IRQn 1 */
-
-  /* USER CODE END SysTick_IRQn 1 */
-}
-
-/******************************************************************************/
-/* STM32F0xx Peripheral Interrupt Handlers                                    */
-/* Add here the Interrupt Handlers for the used peripherals.                  */
-/* For the available peripheral interrupt handler names,                      */
-/* please refer to the startup file (startup_stm32f0xx.s).                    */
-/******************************************************************************/
+/* USER CODE END Private defines */
 
 /**
-* @brief This function handles DMA1 channel 2 and 3 interrupts.
-*/
-void DMA1_Channel2_3_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Channel2_3_IRQn 0 */
-
-  /* USER CODE END DMA1_Channel2_3_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_usart1_tx);
-  /* USER CODE BEGIN DMA1_Channel2_3_IRQn 1 */
-
-  /* USER CODE END DMA1_Channel2_3_IRQn 1 */
-}
+  * @}
+  */ 
 
 /**
-* @brief This function handles TIM17 global interrupt.
-*/
-void TIM17_IRQHandler(void)
-{
-  /* USER CODE BEGIN TIM17_IRQn 0 */
+  * @}
+*/ 
 
-  /* USER CODE END TIM17_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim17);
-  /* USER CODE BEGIN TIM17_IRQn 1 */
-
-  /* USER CODE END TIM17_IRQn 1 */
-}
-
-/* USER CODE BEGIN 1 */
-
-/* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

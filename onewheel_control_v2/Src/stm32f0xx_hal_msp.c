@@ -34,8 +34,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f0xx_hal.h"
 
-extern DMA_HandleTypeDef hdma_usart1_tx;
-
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
@@ -204,74 +202,6 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base)
   /* USER CODE BEGIN TIM17_MspDeInit 1 */
 
   /* USER CODE END TIM17_MspDeInit 1 */
-
-}
-
-void HAL_UART_MspInit(UART_HandleTypeDef* huart)
-{
-
-  GPIO_InitTypeDef GPIO_InitStruct;
-  if(huart->Instance==USART1)
-  {
-  /* USER CODE BEGIN USART1_MspInit 0 */
-
-  /* USER CODE END USART1_MspInit 0 */
-    /* Peripheral clock enable */
-    __USART1_CLK_ENABLE();
-  
-    /**USART1 GPIO Configuration    
-    PA2     ------> USART1_TX 
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_2;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF1_USART1;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    /* Peripheral DMA init*/
-  
-    hdma_usart1_tx.Instance = DMA1_Channel2;
-    hdma_usart1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
-    hdma_usart1_tx.Init.PeriphInc = DMA_PINC_DISABLE;
-    hdma_usart1_tx.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_usart1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-    hdma_usart1_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-    hdma_usart1_tx.Init.Mode = DMA_NORMAL;
-    hdma_usart1_tx.Init.Priority = DMA_PRIORITY_LOW;
-    HAL_DMA_Init(&hdma_usart1_tx);
-
-    __HAL_LINKDMA(huart,hdmatx,hdma_usart1_tx);
-
-  /* USER CODE BEGIN USART1_MspInit 1 */
-
-  /* USER CODE END USART1_MspInit 1 */
-  }
-
-}
-
-void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
-{
-
-  if(huart->Instance==USART1)
-  {
-  /* USER CODE BEGIN USART1_MspDeInit 0 */
-
-  /* USER CODE END USART1_MspDeInit 0 */
-    /* Peripheral clock disable */
-    __USART1_CLK_DISABLE();
-  
-    /**USART1 GPIO Configuration    
-    PA2     ------> USART1_TX 
-    */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_2);
-
-    /* Peripheral DMA DeInit*/
-    HAL_DMA_DeInit(huart->hdmatx);
-  }
-  /* USER CODE BEGIN USART1_MspDeInit 1 */
-
-  /* USER CODE END USART1_MspDeInit 1 */
 
 }
 
